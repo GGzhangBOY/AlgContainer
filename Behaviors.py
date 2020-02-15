@@ -85,14 +85,14 @@ class SimCar:
         self.car_BrakingMechanism.brakeRequest(brake_to)
         self.car_EngineMechanism.throttleRequest(throttle_to)
         
-        self._WriteResultToSM(self._ValidateAlgInput())
+        self.__WriteResultToSM(self.__ValidateAlgInput())
 
-    def _ValidateAlgInput(self):
+    def __ValidateAlgInput(self):
         return [self.car_SteeringMechanism.returnSteeringResult(),
         self.car_BrakingMechanism.returnBrakingResult(),
         self.car_EngineMechanism.returnEngineResult()]
 
-    def _WriteResultToSM(self, in_result):
+    def __WriteResultToSM(self, in_result):
         DataReceiver.writeAlgControllerSharedMemary(in_result)
     
 

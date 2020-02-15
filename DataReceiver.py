@@ -1,6 +1,7 @@
 import mmap
 from ctypes import *
 import binascii
+import re
 import numpy as np
 from PIL import Image
 import PIL.Image as img
@@ -30,6 +31,10 @@ class AlgInformation(Structure):
     _fields_= [("steeringMechanism_TuringRate", c_float),("brakingMechanism_BrakingRate", c_float)
     ,("engineMechanism_ThrottleRate", c_float), ("message", c_char*200)]
 
+class BoundingBoxInfomation:
+    topLeft = []
+    heightWidth = []
+
 Points = []
 
 c_dll = cdll.LoadLibrary("SM_Access.dll")
@@ -43,6 +48,7 @@ g_FreePointCloudData = c_dll.FreePointCloudMemary
 g_freeMemary = c_dll.FreeAllocatedMemary
 g_CarInformation = c_dll.GetCarInformation
 g_CarInformation.restype = car_info
+g_BoundingBoxInfomation = c_dll.GetBoundingBoxInfo
 w_CarControllerCommand = c_dll.writeAlgControllerCommand
 
 
@@ -110,7 +116,7 @@ def _packeageTestFunction():
     '''
 
 """Return the Car camera gray image data and the car position"""
-def aquireImageData(isGray = False):
+def aquireImageData(isGray = False, hasBoundingBox = False):
     out_CarPosition = []
     out_CameraImage = []
 
@@ -136,11 +142,26 @@ def aquireImageData(isGray = False):
         out_CameraImage = [np.array(cv.cvtColor(np.array(t_image1),cv.COLOR_BGR2RGB)),
         np.array(cv.cvtColor(np.array(t_image2),cv.COLOR_BGR2RGB)),
         np.array(cv.cvtColor(np.array(t_image3),cv.COLOR_BGR2RGB))]
+    
+    if(hasBoundingBox):
+        DatasetInfo = dict()
+        buffer = create_string_buffer(4*10000)
+        g_BoundingBoxInfomation(buffer)
+        str_data = str(buffer.value,encoding='utf-8')
+        camera_data = str_data.split('\n')[:-1]
+        for line in camera_data:
+            line_info = re.split(" |,|;",line)
+            DatasetInfo[line_info[0][6]] = []
+            for i in range(int((len(line_info)-1)/4)):
+                DatasetInfo[line_info[0][6]].append([int(float(line_info[4*i+1])),int(float(line_info[4*i+2])),
+                int(float(line_info[4*i+3])),int(float(line_info[4*i+4]))])
 
-    g_freeMemary = c_dll.FreeAllocatedMemary
     g_freeMemary()
 
-    return out_CarPosition,out_CameraImage
+    if(not hasBoundingBox):
+        return out_CarPosition,out_CameraImage
+    else:
+        return [out_CarPosition,out_CameraImage,DatasetInfo]
 
 
 """Return the Lidar point cloud data and the car position"""
@@ -185,11 +206,13 @@ def writeAlgControllerSharedMemary(in_command):
 
 if __name__ == "__main__":
     while True:
+        #aquireDatasetInfomation()
         #_packeageTestFunction()
-        print(aquireCarInformation())
+        #print(aquireCarInformation())
+        aquireImageData()
     """_,img = aquireImageData()
-    Image.fromarray(img[0]).save("Output1.jpg")
-    Image.fromarray(img[1]).save("Output2.jpg")
-    Image.fromarray(img[2]).save("Output3.jpg")"""
+    Image.fromarray(img[0]).save("Output1.png")
+    Image.fromarray(img[1]).save("Output2.png")
+    Image.fromarray(img[2]).save("Output3.png")"""
     #print(aquireCarPosition())
     #print(aquirePointCloudData())

@@ -40,6 +40,8 @@ def show_info(img,left_cur,right_cur,center):
         
     cv2.putText(img,'the angle is %.2fm of %s'%(np.abs(center),fangxiang),(50,100),font,1,(255,255,255),2)
 
+    cv2.putText(img,'State: Tracked',(50,150),font,1,(255,255,255),2)
+
 def draw_lines(undist,warped,left_fit,right_fit,left_cur,right_cur,center,Minv,show_img = True):
     #创建一个全黑的底层图去划线
     undist = np.array(undist)
@@ -246,6 +248,14 @@ def warp(edged_img, from_poly, to_poly, print_img = True):
 
     return warped, unpersp, Minv
 
+def AlgOutput(cv_result):
+    if(cv_result[1] > 40):
+        return 5
+    elif(cv_result[1] < -20):
+        return -5
+    else:
+        return cv_result[0]
+
 
 while True:
     # Read in the image and convert to grayscale
@@ -297,10 +307,11 @@ while True:
         left_curverad, right_curverad, center = curvature(left_fit,right_fit,warped, False)
         result = draw_lines(image_dim3,warped,left_fit,right_fit,left_curverad,right_curverad,center,Minv, False)
         to_adjust = calcaulateOffsetAndAngle(g_left_fit_x, g_lane_center)
-        sim_car.GetAlgInputAndWrite(-to_adjust[0], 0, 0.5)
+        Alg_result = AlgOutput(to_adjust)
+        sim_car.GetAlgInputAndWrite(-Alg_result, 0, 0.5)
     else:
         result = gray
         sim_car.GetAlgInputAndWrite(0, 1, 0)
         
-    cv2.imshow("Camera3",result)
+    cv2.imshow("Camera3",cv2.resize(result, (640,480), interpolation=cv2.INTER_AREA))
     cv2.waitKey(1)    
